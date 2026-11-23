@@ -6,23 +6,27 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import { pool } from './config/db.js';
 import authRoutes from './routes/authRoutes.js';
+import itemRoutes from './routes/itemRoutes.js';
 
 dotenv.config();
 
 const app = express();
 const httpServer = createServer(app);
 
-app.use('/api/auth', authRoutes);
-
 export const io = new Server(httpServer, {
   cors: { origin: process.env.CLIENT_URL, credentials: true },
 });
 
+// 1. Body & Cookie Parsers MUST come first
 app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }));
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// Health check to verify DB connection
+// 2. Routes come AFTER parsers
+app.use('/api/auth', authRoutes);
+app.use('/api/items', itemRoutes);
+
 app.get('/api/health', async (req, res) => {
   try {
     const result = await pool.query('SELECT NOW()');

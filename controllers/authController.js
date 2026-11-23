@@ -18,7 +18,7 @@ const sendTokenCookie = (res, user) => {
 };
 
 export const register = async (req, res) => {
-  const { full_name, email, password } = req.body;
+  const { full_name, email, password } = req.body || {};
 
   if (!full_name || !email || !password) {
     return res.status(400).json({ message: 'All fields are required.' });

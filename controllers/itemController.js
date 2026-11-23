@@ -70,9 +70,16 @@ export const getItems = async (req, res) => {
     conditions.push(`i.type = $${values.length}`);
   }
 
-  if (category) {
-    values.push(category);
-    conditions.push(`i.category = $${values.length}`);
+  if (category && category !== 'All Items') {
+    const categoryList = category
+      .split(',')
+      .map((c) => c.trim())
+      .filter(Boolean);
+
+  if (categoryList.length > 0) {
+      values.push(categoryList);
+      conditions.push(`i.category ILIKE ANY($${values.length}::text[])`);
+    }
   }
 
   if (location) {
@@ -87,7 +94,9 @@ export const getItems = async (req, res) => {
 
   if (search) {
     values.push(`%${search.trim()}%`);
-    conditions.push(`(i.title ILIKE $${values.length} OR i.description ILIKE $${values.length})`);
+    conditions.push(
+      `(i.title ILIKE $${values.length} OR i.description ILIKE $${values.length} OR i.campus_location ILIKE $${values.length})`
+    );
   }
 
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
@@ -102,15 +111,18 @@ export const getItems = async (req, res) => {
         i.description,
         i.category,
         i.campus_location,
-        i.date_occurred,
+        TO_CHAR(i.date_occurred, 'YYYY-MM-DD') AS date_occurred,
         i.image_url,
         i.verification_question,
         i.status,
         i.created_at,
-        u.full_name AS reporter_name
+        u.full_name AS reporter_name,
+        COUNT(c.id) FILTER (WHERE c.status = 'pending')::int AS pending_claims_count
       FROM items i
       JOIN users u ON i.reporter_id = u.id
+      LEFT JOIN claims c ON c.item_id = i.id
       ${whereClause}
+      GROUP BY i.id, u.full_name
       ORDER BY i.created_at DESC`,
       values
     );
@@ -133,15 +145,18 @@ export const getItemById = async (req, res) => {
         i.description,
         i.category,
         i.campus_location,
-        i.date_occurred,
+        TO_CHAR(i.date_occurred, 'YYYY-MM-DD') AS date_occurred,
         i.image_url,
         i.verification_question,
         i.status,
         i.created_at,
-        u.full_name AS reporter_name
+        u.full_name AS reporter_name,
+        COUNT(c.id) FILTER (WHERE c.status = 'pending')::int AS pending_claims_count
       FROM items i
       JOIN users u ON i.reporter_id = u.id
-      WHERE i.id = $1`,
+      LEFT JOIN claims c ON c.item_id = i.id
+      WHERE i.id = $1
+      GROUP BY i.id, u.full_name`,
       [req.params.id]
     );
 
