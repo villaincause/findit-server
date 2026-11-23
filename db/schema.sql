@@ -18,6 +18,7 @@ CREATE TABLE items (
     date_occurred DATE NOT NULL,
     image_url TEXT,
     verification_question TEXT,
+    contact_info VARCHAR(150),
     status VARCHAR(20) DEFAULT 'open' CHECK (status IN ('open', 'claimed', 'returned')),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
